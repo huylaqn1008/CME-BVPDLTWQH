@@ -1,0 +1,32 @@
+﻿const { Router } = require('express');
+const { body } = require('express-validator');
+const {
+  listCourses,
+  createCourse,
+  updateCourse,
+  deleteCourse,
+  listEligibleCoursesForDoctor,
+} = require('../controllers/courseController');
+const auth = require('../middlewares/auth');
+const roleGuard = require('../middlewares/role');
+
+const router = Router();
+
+router.get('/', auth, listCourses);
+router.get('/eligible/me', auth, roleGuard('DOCTOR'), listEligibleCoursesForDoctor);
+router.post(
+  '/',
+  auth,
+  roleGuard('ADMIN'),
+  [
+    body('title').isLength({ min: 2 }),
+    body('cmePoints').isNumeric(),
+    body('submissionStatus').optional().isIn(['OPEN', 'SUBMISSION_OPEN', 'CLOSED']),
+    body('applicableDepartments').optional().isArray(),
+  ],
+  createCourse
+);
+router.patch('/:id', auth, roleGuard('ADMIN'), updateCourse);
+router.delete('/:id', auth, roleGuard('ADMIN'), deleteCourse);
+
+module.exports = router;
