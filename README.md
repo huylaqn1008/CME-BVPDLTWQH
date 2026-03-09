@@ -27,10 +27,6 @@
 - `cd backend`
 - `npm run seed`
 
-Tài khoản mặc định:
-- username: `admin`
-- password: `Admin@123`
-
 ## 4) Chạy hệ thống
 - Terminal 1 (backend):
   - `cd backend`

@@ -18,16 +18,98 @@ const buildDoctorScopeFilter = (doctor) => {
   };
 };
 
+const normalizeSort = (sortBy, sortOrder) => {
+  const allowed = ['title', 'startDate', 'createdAt'];
+  const by = allowed.includes(sortBy) ? sortBy : 'createdAt';
+  const order = sortOrder === 'asc' ? 1 : -1;
+  return { [by]: order };
+};
+
+const deriveTimelineStatus = (course) => {
+  const now = new Date();
+  const start = course.startDate ? new Date(course.startDate) : null;
+  const end = course.endDate ? new Date(course.endDate) : null;
+
+  if (start && now < start) return 'UPCOMING';
+  if (end && now > end) return 'ENDED';
+  return 'OPEN';
+};
+
+const timelineStatusLabel = {
+  OPEN: 'Đang mở',
+  UPCOMING: 'Sắp mở',
+  ENDED: 'Đã kết thúc',
+};
+
 const listCourses = async (req, res) => {
+  const {
+    page = 1,
+    limit = 10,
+    year,
+    status = 'all',
+    department,
+    search,
+    sortBy = 'createdAt',
+    sortOrder = 'desc',
+  } = req.query;
+
   const query = { deletedAt: null };
   if (req.user.role === 'DOCTOR') Object.assign(query, buildDoctorScopeFilter(req.user));
 
-  const courses = await Course.find(query)
+  if (search) {
+    query.title = { $regex: String(search).trim(), $options: 'i' };
+  }
+
+  if (department && department !== 'all') {
+    query.applicableDepartments = department;
+  }
+
+  if (year) {
+    const y = Number(year);
+    if (!Number.isNaN(y)) {
+      const from = new Date(`${y}-01-01T00:00:00.000Z`);
+      const to = new Date(`${y}-12-31T23:59:59.999Z`);
+      query.startDate = { $gte: from };
+      query.endDate = { $lte: to };
+    }
+  }
+
+  const rawCourses = await Course.find(query)
     .populate('createdBy', 'name username')
     .populate('applicableDepartments', 'name')
-    .sort({ createdAt: -1 });
+    .sort(normalizeSort(sortBy, sortOrder));
 
-  return res.json(courses);
+  let courses = rawCourses.map((doc) => {
+    const obj = doc.toObject();
+    const timelineStatus = deriveTimelineStatus(obj);
+    return {
+      ...obj,
+      timelineStatus,
+      timelineStatusLabel: timelineStatusLabel[timelineStatus],
+    };
+  });
+
+  if (status && status !== 'all') {
+    courses = courses.filter((course) => course.timelineStatus === status);
+  }
+
+  const total = courses.length;
+  const pageNum = Math.max(1, Number(page) || 1);
+  const limitNum = Math.max(1, Number(limit) || 10);
+  const totalPages = Math.max(1, Math.ceil(total / limitNum));
+  const currentPage = Math.min(pageNum, totalPages);
+  const startIdx = (currentPage - 1) * limitNum;
+  const data = courses.slice(startIdx, startIdx + limitNum);
+
+  return res.json({
+    data,
+    pagination: {
+      page: currentPage,
+      limit: limitNum,
+      total,
+      totalPages,
+    },
+  });
 };
 
 const createCourse = async (req, res) => {

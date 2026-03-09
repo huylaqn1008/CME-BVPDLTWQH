@@ -1,238 +1,214 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import api from '../api/client';
+import CourseFilterBar from '../components/courses/CourseFilterBar';
+import CourseTable from '../components/courses/CourseTable';
+import CourseModal from '../components/courses/CourseModal';
+import Pagination from '../components/courses/Pagination';
 
-const statusLabel = {
-  OPEN: 'Đang mở',
-  SUBMISSION_OPEN: 'Cho phép nộp',
-  CLOSED: 'Đã đóng',
-};
-
-const statusTone = {
-  OPEN: 'is-open',
-  SUBMISSION_OPEN: 'is-submission',
-  CLOSED: 'is-closed',
-};
-
-const emptyForm = {
-  title: '',
-  description: '',
-  cmePoints: 1,
-  submissionStatus: 'OPEN',
-  applicableDepartments: [],
-  startDate: '',
-  endDate: '',
-};
-
-const toDateInput = (value) => {
-  if (!value) return '';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toISOString().slice(0, 10);
+const initialFilters = {
+  page: 1,
+  limit: 10,
+  year: '',
+  status: 'all',
+  department: 'all',
+  search: '',
+  sortBy: 'createdAt',
+  sortOrder: 'desc',
 };
 
 export default function CoursesPage() {
+  const [filters, setFilters] = useState(initialFilters);
   const [courses, setCourses] = useState([]);
+  const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0, limit: 10 });
   const [departments, setDepartments] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [deptSearch, setDeptSearch] = useState('');
-  const [editingId, setEditingId] = useState('');
-  const [form, setForm] = useState(emptyForm);
 
-  const load = async () => {
-    const [courseRes, deptRes] = await Promise.all([api.get('/courses'), api.get('/departments')]);
-    setCourses(courseRes.data);
-    setDepartments(deptRes.data);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingCourse, setEditingCourse] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+
+  const load = async (nextFilters = filters) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      Object.entries(nextFilters).forEach(([key, value]) => {
+        if (value === '' || value === undefined || value === null) return;
+        params.append(key, value);
+      });
+
+      const [courseRes, deptRes] = await Promise.all([
+        api.get(`/courses?${params.toString()}`),
+        api.get('/departments'),
+      ]);
+
+      setCourses(courseRes.data.data || []);
+      setPagination(courseRes.data.pagination || { page: 1, totalPages: 1, total: 0, limit: 10 });
+      setDepartments(deptRes.data || []);
+    } catch (err) {
+      const apiMessage = err.response?.data?.message;
+      setError(apiMessage || 'Không thể tải danh sách khóa học.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    load();
-  }, []);
+    load(filters);
+  }, [filters]);
 
-  const selectedDept = useMemo(() => {
-    const set = new Set(form.applicableDepartments);
-    return departments.filter((d) => set.has(d._id));
-  }, [departments, form.applicableDepartments]);
-
-  const filteredDepartments = useMemo(() => {
-    const kw = deptSearch.trim().toLowerCase();
-    if (!kw) return departments.slice(0, 8);
-    return departments.filter((d) => d.name.toLowerCase().includes(kw)).slice(0, 8);
-  }, [departments, deptSearch]);
-
-  const isSelected = (departmentId) => form.applicableDepartments.includes(departmentId);
-
-  const addDepartment = (departmentId) => {
-    if (isSelected(departmentId)) return;
-    setForm((prev) => ({ ...prev, applicableDepartments: [...prev.applicableDepartments, departmentId] }));
-  };
-
-  const removeDepartment = (departmentId) => {
-    setForm((prev) => ({
-      ...prev,
-      applicableDepartments: prev.applicableDepartments.filter((id) => id !== departmentId),
-    }));
-  };
-
-  const resetForm = () => {
-    setForm(emptyForm);
-    setEditingId('');
-    setDeptSearch('');
-  };
-
-  const onEdit = (course) => {
-    setEditingId(course._id);
-    setForm({
-      title: course.title || '',
-      description: course.description || '',
-      cmePoints: Number(course.cmePoints || 0),
-      submissionStatus: course.submissionStatus || 'OPEN',
-      applicableDepartments: Array.isArray(course.applicableDepartments)
-        ? course.applicableDepartments.map((d) => (typeof d === 'string' ? d : d._id))
-        : [],
-      startDate: toDateInput(course.startDate),
-      endDate: toDateInput(course.endDate),
+  const years = useMemo(() => {
+    const set = new Set();
+    courses.forEach((c) => {
+      if (c.startDate) set.add(new Date(c.startDate).getFullYear());
     });
-    setDeptSearch('');
-    setMessage('Đang chỉnh sửa khóa học.');
-    setError('');
+    const nowYear = new Date().getFullYear();
+    [nowYear - 1, nowYear, nowYear + 1, nowYear + 2].forEach((y) => set.add(y));
+    return [...set].sort((a, b) => b - a);
+  }, [courses]);
+
+  const openCreate = () => {
+    setEditingCourse(null);
+    setModalOpen(true);
   };
 
-  const onDelete = async (courseId) => {
+  const openEdit = (course) => {
+    setEditingCourse(course);
+    setModalOpen(true);
+  };
+
+  const onSaveCourse = async (payload) => {
+    setError('');
+    setMessage('');
+    try {
+      if (editingCourse) {
+        await api.patch(`/courses/${editingCourse._id}`, payload);
+        setMessage('Cập nhật khóa học thành công.');
+      } else {
+        await api.post('/courses', payload);
+        setMessage('Tạo khóa học thành công.');
+      }
+      setModalOpen(false);
+      setEditingCourse(null);
+      load(filters);
+    } catch (err) {
+      const apiMessage = err.response?.data?.message;
+      const firstValidation = err.response?.data?.errors?.[0]?.msg;
+      setError(apiMessage || firstValidation || 'Không thể lưu khóa học.');
+    }
+  };
+
+  const onDelete = async (id) => {
     const ok = window.confirm('Bạn chắc chắn muốn xóa khóa học này?');
     if (!ok) return;
 
     try {
-      await api.delete(`/courses/${courseId}`);
-      if (editingId === courseId) resetForm();
+      await api.delete(`/courses/${id}`);
       setMessage('Xóa khóa học thành công.');
-      setError('');
-      load();
+      setSelectedIds((prev) => prev.filter((x) => x !== id));
+      load(filters);
     } catch (err) {
       const apiMessage = err.response?.data?.message;
-      setError(apiMessage || 'Không thể xóa khóa học');
+      setError(apiMessage || 'Không thể xóa khóa học.');
     }
   };
 
-  const submit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setMessage('');
+  const deleteSelected = async () => {
+    if (selectedIds.length === 0) return;
+    const ok = window.confirm(`Xóa ${selectedIds.length} khóa học đã chọn?`);
+    if (!ok) return;
 
     try {
-      if (editingId) {
-        await api.patch(`/courses/${editingId}`, form);
-        setMessage('Cập nhật khóa học thành công.');
-      } else {
-        await api.post('/courses', form);
-        setMessage('Tạo khóa học thành công.');
-      }
-      resetForm();
-      load();
+      await Promise.all(selectedIds.map((id) => api.delete(`/courses/${id}`)));
+      setMessage('Đã xóa các khóa học đã chọn.');
+      setSelectedIds([]);
+      load(filters);
     } catch (err) {
       const apiMessage = err.response?.data?.message;
-      const firstValidation = err.response?.data?.errors?.[0]?.msg;
-      setError(apiMessage || firstValidation || 'Không thể lưu khóa học');
+      setError(apiMessage || 'Không thể xóa nhiều khóa học.');
     }
+  };
+
+  const onToggle = (id) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const onToggleAll = (checked) => {
+    if (checked) setSelectedIds(courses.map((c) => c._id));
+    else setSelectedIds([]);
+  };
+
+  const onSort = (field) => {
+    setFilters((prev) => {
+      if (prev.sortBy === field) {
+        return { ...prev, sortOrder: prev.sortOrder === 'asc' ? 'desc' : 'asc', page: 1 };
+      }
+      return { ...prev, sortBy: field, sortOrder: 'asc', page: 1 };
+    });
   };
 
   return (
     <div className="page">
-      <div className="page-head">
-        <h1>Quản lý khóa học</h1>
-        <p>Thiết lập khóa học, điểm CME và phạm vi theo khoa/phòng.</p>
+      <div className="page-head page-head-inline">
+        <div>
+          <h1>Quản lý khóa học</h1>
+          <p>Danh sách khóa học CME theo chuẩn dashboard quản trị bệnh viện.</p>
+        </div>
+        <button className="btn" type="button" onClick={openCreate}>+ Tạo khóa học</button>
       </div>
 
-      <form className="card course-form" onSubmit={submit}>
-        <div className="course-grid">
-          <input placeholder="Tên khóa học" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-          <input placeholder="Mô tả ngắn" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          <input type="number" min="0" value={form.cmePoints} onChange={(e) => setForm({ ...form, cmePoints: Number(e.target.value) })} />
-          <select value={form.submissionStatus} onChange={(e) => setForm({ ...form, submissionStatus: e.target.value })}>
-            <option value="OPEN">Đang mở</option>
-            <option value="SUBMISSION_OPEN">Cho phép nộp</option>
-            <option value="CLOSED">Đã đóng</option>
-          </select>
-          <input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />
-          <input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} />
+      <CourseFilterBar
+        filters={filters}
+        years={years}
+        departments={departments}
+        onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
+        onReset={() => setFilters(initialFilters)}
+      />
+
+      {error && <p className="error">{error}</p>}
+      {message && <p className="success">{message}</p>}
+
+      {selectedIds.length > 0 && (
+        <div className="card bulk-bar">
+          <p className="muted">Đã chọn {selectedIds.length} khóa học</p>
+          <button className="btn btn-soft-danger" type="button" onClick={deleteSelected}>Xóa đã chọn</button>
         </div>
+      )}
 
-        <div className="course-scope">
-          <p className="muted">Khoa áp dụng (bỏ trống = toàn bệnh viện)</p>
+      <CourseTable
+        courses={courses}
+        selectedIds={selectedIds}
+        onToggle={onToggle}
+        onToggleAll={onToggleAll}
+        onEdit={openEdit}
+        onDelete={onDelete}
+        sortBy={filters.sortBy}
+        sortOrder={filters.sortOrder}
+        onSort={onSort}
+      />
 
-          <input
-            placeholder="Tìm khoa/phòng để thêm"
-            value={deptSearch}
-            onChange={(e) => setDeptSearch(e.target.value)}
-          />
-
-          {deptSearch && (
-            <div className="dept-results">
-              {filteredDepartments.length > 0 ? (
-                filteredDepartments.map((d) => (
-                  <button
-                    key={d._id}
-                    type="button"
-                    className="btn btn-ghost btn-inline"
-                    onClick={() => addDepartment(d._id)}
-                    disabled={isSelected(d._id)}
-                  >
-                    {d.name}
-                  </button>
-                ))
-              ) : (
-                <p className="muted">Không có khoa/phòng phù hợp</p>
-              )}
-            </div>
-          )}
-
-          <div className="dept-chips">
-            {selectedDept.map((d) => (
-              <button key={d._id} type="button" className="dept-chip" onClick={() => removeDepartment(d._id)}>
-                {d.name} x
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {error && <p className="error">{error}</p>}
-        {message && <p className="success">{message}</p>}
-
-        <div className="row-actions">
-          <button className="btn" type="submit">{editingId ? 'Lưu cập nhật' : 'Tạo khóa học'}</button>
-          {editingId && (
-            <button className="btn btn-ghost" type="button" onClick={resetForm}>
-              Hủy chỉnh sửa
-            </button>
-          )}
-        </div>
-      </form>
-
-      <div className="course-cards">
-        {courses.map((c) => (
-          <div key={c._id} className="metric-card course-card">
-            <div className="course-card-top">
-              <h3>{c.title}</h3>
-              <span className={`status-pill ${statusTone[c.submissionStatus] || 'is-open'}`}>
-                {statusLabel[c.submissionStatus] || c.submissionStatus || 'Đang mở'}
-              </span>
-            </div>
-
-            <div className="course-points">{c.cmePoints} điểm CME</div>
-            <p className="course-desc">{c.description || 'Không có mô tả'}</p>
-            <p className="course-scope-text">
-              {Array.isArray(c.applicableDepartments) && c.applicableDepartments.length > 0
-                ? c.applicableDepartments.map((d) => d.name).join(', ')
-                : 'Toàn bệnh viện'}
-            </p>
-
-            <div className="course-actions">
-              <button className="btn btn-soft" type="button" onClick={() => onEdit(c)}>Sửa</button>
-              <button className="btn btn-soft-danger" type="button" onClick={() => onDelete(c._id)}>Xóa</button>
-            </div>
-          </div>
-        ))}
+      <div className="pagination-meta muted">
+        {loading ? 'Đang tải...' : `Tổng ${pagination.total} khóa học`}
       </div>
+
+      <Pagination
+        page={pagination.page}
+        totalPages={pagination.totalPages}
+        onPageChange={(page) => setFilters((prev) => ({ ...prev, page }))}
+      />
+
+      <CourseModal
+        open={modalOpen}
+        course={editingCourse}
+        departments={departments}
+        onClose={() => {
+          setModalOpen(false);
+          setEditingCourse(null);
+        }}
+        onSubmit={onSaveCourse}
+        loading={loading}
+      />
     </div>
   );
 }
