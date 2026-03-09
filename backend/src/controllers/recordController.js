@@ -7,6 +7,7 @@ const ApprovalHistory = require('../models/ApprovalHistory');
 const Certificate = require('../models/Certificate');
 const { generateCertificate } = require('../utils/certificate');
 const { writeAudit } = require('../services/auditService');
+const { deriveTimelineStatus } = require('../utils/courseStatus');
 
 const courseVisibleForDoctor = (course, doctor) => {
   const departments = Array.isArray(course.applicableDepartments) ? course.applicableDepartments : [];
@@ -66,10 +67,10 @@ const createExternalRecord = async (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'Vui lòng tải lên file minh chứng' });
 
   const { courseId } = req.body;
-  const course = await Course.findOne({ _id: courseId, deletedAt: null }).select('title cmePoints submissionStatus applicableDepartments');
+  const course = await Course.findOne({ _id: courseId, deletedAt: null }).select('title cmePoints applicableDepartments startDate endDate');
   if (!course) return res.status(404).json({ message: 'Khóa học không tồn tại' });
 
-  if (course.submissionStatus && !['OPEN', 'SUBMISSION_OPEN'].includes(course.submissionStatus)) {
+  if (deriveTimelineStatus(course) !== 'OPEN') {
     return res.status(400).json({ message: 'Khóa học hiện không cho phép nộp minh chứng' });
   }
 
@@ -102,9 +103,9 @@ const doctorResubmitRejectedRecord = async (req, res) => {
   if (record.status !== 'rejected') return res.status(400).json({ message: 'Chỉ hồ sơ bị từ chối mới được sửa gửi lại' });
   if (record.type !== 'external') return res.status(400).json({ message: 'Chỉ áp dụng cho hồ sơ ngoại viện' });
 
-  const course = await Course.findOne({ _id: courseId, deletedAt: null }).select('title cmePoints submissionStatus applicableDepartments');
+  const course = await Course.findOne({ _id: courseId, deletedAt: null }).select('title cmePoints applicableDepartments startDate endDate');
   if (!course) return res.status(404).json({ message: 'Khóa học không tồn tại' });
-  if (course.submissionStatus && !['OPEN', 'SUBMISSION_OPEN'].includes(course.submissionStatus)) {
+  if (deriveTimelineStatus(course) !== 'OPEN') {
     return res.status(400).json({ message: 'Khóa học hiện không cho phép nộp minh chứng' });
   }
   if (!courseVisibleForDoctor(course, req.user)) {

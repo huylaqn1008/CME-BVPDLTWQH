@@ -21,7 +21,6 @@ router.post(
   [
     body('title').isLength({ min: 2 }),
     body('cmePoints').isNumeric(),
-    body('submissionStatus').optional().isIn(['OPEN', 'SUBMISSION_OPEN', 'CLOSED']),
     body('applicableDepartments').optional().isArray(),
   ],
   createCourse

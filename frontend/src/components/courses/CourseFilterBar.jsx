@@ -12,7 +12,7 @@
         <option value="all">Tất cả trạng thái</option>
         <option value="OPEN">Đang mở</option>
         <option value="UPCOMING">Sắp mở</option>
-        <option value="ENDED">Đã kết thúc</option>
+        <option value="ENDED">Đã đóng</option>
       </select>
 
       <select value={filters.department} onChange={(e) => onChange({ department: e.target.value, page: 1 })}>

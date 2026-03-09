@@ -9,7 +9,7 @@ const statusClass = {
 const statusLabel = {
   OPEN: 'Đang mở',
   UPCOMING: 'Sắp mở',
-  ENDED: 'Đã kết thúc',
+  ENDED: 'Đã đóng',
 };
 
 const formatDate = (value) => {

@@ -1,6 +1,7 @@
-﻿const { validationResult } = require('express-validator');
+const { validationResult } = require('express-validator');
 const Course = require('../models/Course');
 const { writeAudit } = require('../services/auditService');
+const { deriveTimelineStatus, timelineStatusLabel } = require('../utils/courseStatus');
 
 const buildDoctorScopeFilter = (doctor) => {
   if (!doctor?.departmentId) {
@@ -25,21 +26,6 @@ const normalizeSort = (sortBy, sortOrder) => {
   return { [by]: order };
 };
 
-const deriveTimelineStatus = (course) => {
-  const now = new Date();
-  const start = course.startDate ? new Date(course.startDate) : null;
-  const end = course.endDate ? new Date(course.endDate) : null;
-
-  if (start && now < start) return 'UPCOMING';
-  if (end && now > end) return 'ENDED';
-  return 'OPEN';
-};
-
-const timelineStatusLabel = {
-  OPEN: 'Đang mở',
-  UPCOMING: 'Sắp mở',
-  ENDED: 'Đã kết thúc',
-};
 
 const listCourses = async (req, res) => {
   const {
@@ -121,6 +107,7 @@ const createCourse = async (req, res) => {
     createdBy: req.user._id,
     applicableDepartments: Array.isArray(req.body.applicableDepartments) ? [...new Set(req.body.applicableDepartments)] : [],
   };
+  delete payload.submissionStatus;
 
   const course = await Course.create(payload);
   await writeAudit({ actorId: req.user._id, action: 'CREATE_COURSE', entityType: 'Course', entityId: course._id.toString() });
@@ -130,6 +117,7 @@ const createCourse = async (req, res) => {
 const updateCourse = async (req, res) => {
   const payload = { ...req.body };
   if (Array.isArray(payload.applicableDepartments)) payload.applicableDepartments = [...new Set(payload.applicableDepartments)];
+  delete payload.submissionStatus;
 
   const course = await Course.findByIdAndUpdate(req.params.id, payload, { new: true });
   if (!course) return res.status(404).json({ message: 'Course not found' });
@@ -147,16 +135,24 @@ const deleteCourse = async (req, res) => {
 const listEligibleCoursesForDoctor = async (req, res) => {
   const query = {
     deletedAt: null,
-    $or: [{ submissionStatus: { $exists: false } }, { submissionStatus: { $in: ['OPEN', 'SUBMISSION_OPEN'] } }],
     ...buildDoctorScopeFilter(req.user),
   };
 
   const courses = await Course.find(query)
-    .select('title cmePoints submissionStatus applicableDepartments')
+    .select('title cmePoints applicableDepartments startDate endDate')
     .populate('applicableDepartments', 'name')
     .sort({ createdAt: -1 });
 
-  return res.json(courses);
+  const eligibleCourses = courses
+    .map((doc) => {
+      const obj = doc.toObject();
+      const timelineStatus = deriveTimelineStatus(obj);
+      return { ...obj, timelineStatus, timelineStatusLabel: timelineStatusLabel[timelineStatus] };
+    })
+    .filter((course) => course.timelineStatus === 'OPEN');
+
+  return res.json(eligibleCourses);
 };
 
 module.exports = { listCourses, createCourse, updateCourse, deleteCourse, listEligibleCoursesForDoctor };
+

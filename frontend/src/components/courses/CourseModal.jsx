@@ -4,7 +4,6 @@ const emptyForm = {
   title: '',
   description: '',
   cmePoints: 1,
-  submissionStatus: 'OPEN',
   applicableDepartments: [],
   startDate: '',
   endDate: '',
@@ -38,7 +37,6 @@ export default function CourseModal({ open, course, departments, onClose, onSubm
       title: course.title || '',
       description: course.description || '',
       cmePoints: Number(course.cmePoints || 0),
-      submissionStatus: course.submissionStatus || 'OPEN',
       applicableDepartments: deptIds,
       startDate: toDateInput(course.startDate),
       endDate: toDateInput(course.endDate),
@@ -52,6 +50,16 @@ export default function CourseModal({ open, course, departments, onClose, onSubm
     if (!keyword) return departments;
     return departments.filter((d) => d.name.toLowerCase().includes(keyword));
   }, [departments, search]);
+
+  const timelineStatusLabel = useMemo(() => {
+    const now = new Date();
+    const start = form.startDate ? new Date(`${form.startDate}T00:00:00`) : null;
+    const end = form.endDate ? new Date(`${form.endDate}T23:59:59`) : null;
+
+    if (start && now < start) return 'Sắp mở';
+    if (end && now > end) return 'Đã đóng';
+    return 'Đang mở';
+  }, [form.startDate, form.endDate]);
 
   const toggleDepartment = (departmentId) => {
     setForm((prev) => {
@@ -108,14 +116,7 @@ export default function CourseModal({ open, course, departments, onClose, onSubm
               onChange={(e) => setForm({ ...form, cmePoints: Number(e.target.value) })}
               required
             />
-            <select
-              value={form.submissionStatus}
-              onChange={(e) => setForm({ ...form, submissionStatus: e.target.value })}
-            >
-              <option value="OPEN">Đang mở</option>
-              <option value="SUBMISSION_OPEN">Cho phép nộp minh chứng</option>
-              <option value="CLOSED">Đã đóng</option>
-            </select>
+            <input value={timelineStatusLabel} disabled readOnly />
           </div>
         </section>
 
