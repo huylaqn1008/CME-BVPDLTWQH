@@ -1,4 +1,4 @@
-﻿import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const linksByRole = {
@@ -39,12 +39,6 @@ export default function MainLayout() {
           <h2 className="brand-title">CME Manager</h2>
         </div>
 
-        <div className="profile-box">
-          <p className="profile-name">{user?.name}</p>
-          <p className="profile-role">{roleLabel[user?.role] || user?.role}</p>
-          <p className="profile-user">@{user?.username}</p>
-        </div>
-
         <nav className="menu-list">
           {links.map((item) => (
             <NavLink key={item.to} to={item.to} className="menu-item">
@@ -52,6 +46,14 @@ export default function MainLayout() {
             </NavLink>
           ))}
         </nav>
+
+        <div className="side-spacer" />
+
+        <div className="profile-box">
+          <p className="profile-name">{user?.name}</p>
+          <p className="profile-role">{roleLabel[user?.role] || user?.role}</p>
+          <p className="profile-user">@{user?.username}</p>
+        </div>
 
         <button className="btn btn-light" onClick={logout}>Đăng xuất</button>
       </aside>
