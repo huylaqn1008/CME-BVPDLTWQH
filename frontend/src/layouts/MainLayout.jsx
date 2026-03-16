@@ -7,6 +7,7 @@ const linksByRole = {
     { to: '/users', label: 'Người dùng' },
     { to: '/departments', label: 'Khoa/Phòng' },
     { to: '/courses', label: 'Khóa học' },
+    { to: '/activities', label: 'Hoạt động' },
     { to: '/approvals', label: 'Duyệt hồ sơ' },
   ],
   MANAGER: [

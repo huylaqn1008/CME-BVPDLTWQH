@@ -172,21 +172,29 @@ export default function DashboardPage() {
 
           <div className="dashboard-row">
             <div className="card">
-              <SectionHead title="Hoạt động gần đây" subtitle="Cập nhật realtime từ hệ thống" />
-              <div className="activity-list">
-                {data.recentActivities?.length ? (
-                  data.recentActivities.map((activity, index) => (
-                    <ActivityItem
-                      key={index}
-                      name={activity.name}
-                      action={activity.action}
-                      time={new Date(activity.time).toLocaleDateString('vi-VN')}
-                      tone="blue"
-                    />
-                  ))
-                ) : (
-                  <ActivityItem name="Hệ thống" action="đang chờ dữ liệu" time="Hôm nay" tone="blue" />
-                )}
+              <SectionHead title="Cảnh báo tuân thủ" subtitle="Tập trung vào các rủi ro chính" />
+              <div className="pending-list">
+                <div className="pending-item">
+                  <div>
+                    <p>Tỷ lệ đạt chuẩn</p>
+                    <span>{reachedPercent}% bác sĩ đạt chuẩn năm nay</span>
+                  </div>
+                  <Pill label={reachedPercent >= 80 ? 'Ổn' : 'Cần cải thiện'} tone={reachedPercent >= 80 ? 'teal' : 'rose'} />
+                </div>
+                <div className="pending-item">
+                  <div>
+                    <p>Bác sĩ thiếu điểm</p>
+                    <span>{currency(data.missingCount || 0)} người cần bổ sung</span>
+                  </div>
+                  <Pill label="Theo dõi" tone="amber" />
+                </div>
+                <div className="pending-item">
+                  <div>
+                    <p>Điểm trung bình mỗi bác sĩ</p>
+                    <span>{data.totalStaff ? `${Math.round((data.totalPointsYear || 0) / data.totalStaff)} điểm/người` : 'Chưa có dữ liệu'}</span>
+                  </div>
+                  <Pill label="Thống kê" tone="blue" />
+                </div>
               </div>
             </div>
             <div className="card">

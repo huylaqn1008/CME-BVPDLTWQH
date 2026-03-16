@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
@@ -12,6 +12,19 @@ const statusLabel = {
 const typeLabel = {
   internal: 'Nội viện',
   external: 'Ngoại viện',
+};
+
+const formatDateTimeVN = (value) => {
+  if (!value) return '-';
+  return new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date(value));
 };
 
 export default function RecordsPage() {
@@ -148,7 +161,7 @@ export default function RecordsPage() {
       <div className="card">
         <table>
           <thead>
-            <tr><th>Tiêu đề</th><th>Loại</th><th>Điểm</th><th>Trạng thái</th><th>Nguyên nhân</th><th>Chứng nhận</th><th>Thao tác</th></tr>
+            <tr><th>Tiêu đề</th><th>Loại</th><th>Điểm</th><th>Trạng thái</th><th>Nguyên nhân</th><th>Nộp lúc</th><th>Duyệt lúc</th><th>Chứng nhận</th><th>Thao tác</th></tr>
           </thead>
           <tbody>
             {records.map((r) => (
@@ -158,6 +171,8 @@ export default function RecordsPage() {
                 <td>{r.points}</td>
                 <td>{statusLabel[r.status] || r.status}</td>
                 <td>{r.status === 'rejected' ? (r.note || 'Không có ghi chú') : '-'}</td>
+                <td>{formatDateTimeVN(r.createdAt)}</td>
+                <td>{r.status === 'admin_approved' ? formatDateTimeVN(r.updatedAt) : '-'}</td>
                 <td>
                   {r.certificateFile ? (
                     <a href={`http://localhost:5000/files/certificates/${r.certificateFile}`} target="_blank" rel="noreferrer">Xem</a>
@@ -179,3 +194,5 @@ export default function RecordsPage() {
     </div>
   );
 }
+
+

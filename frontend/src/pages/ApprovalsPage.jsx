@@ -9,6 +9,19 @@ const statusLabel = {
   rejected: 'Bị từ chối',
 };
 
+const formatDateTimeVN = (value) => {
+  if (!value) return '-';
+  return new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(new Date(value));
+};
+
 export default function ApprovalsPage() {
   const { user } = useAuth();
   const [records, setRecords] = useState([]);
@@ -87,6 +100,7 @@ export default function ApprovalsPage() {
               <th>Khóa học</th>
               <th>Điểm</th>
               <th>Trạng thái</th>
+              <th>Nộp lúc</th>
               <th>Minh chứng</th>
               <th>Giải trình</th>
               <th>Thao tác</th>
@@ -99,6 +113,7 @@ export default function ApprovalsPage() {
                 <td>{r.title}</td>
                 <td>{r.points}</td>
                 <td>{statusLabel[r.status] || r.status}</td>
+                <td>{formatDateTimeVN(r.createdAt)}</td>
                 <td>
                   <button className="btn btn-inline btn-soft" type="button" onClick={() => viewEvidence(r._id)}>
                     Xem file

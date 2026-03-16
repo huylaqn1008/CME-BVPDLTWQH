@@ -9,6 +9,7 @@ import UploadExternalPage from './pages/UploadExternalPage';
 import ApprovalsPage from './pages/ApprovalsPage';
 import RecordsPage from './pages/RecordsPage';
 import DepartmentsPage from './pages/DepartmentsPage';
+import ActivityPage from './pages/ActivityPage';
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
             <Route path="/users" element={<UsersPage />} />
             <Route path="/departments" element={<DepartmentsPage />} />
             <Route path="/courses" element={<CoursesPage />} />
+            <Route path="/activities" element={<ActivityPage />} />
           </Route>
 
           <Route element={<ProtectedRoute roles={['DOCTOR']} />}>

@@ -400,6 +400,19 @@ td { font-size: 14px; }
   text-align: right;
 }
 
+.activity-filter {
+  display: grid;
+  grid-template-columns: 1fr 160px 160px 140px auto auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.activity-filter input[type='text'],
+.activity-filter input[type='date'],
+.activity-filter select {
+  height: 40px;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -557,6 +570,9 @@ textarea:focus {
   .course-filter-bar {
     grid-template-columns: repeat(2, minmax(220px, 1fr));
   }
+  .activity-filter {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
 }
 
 @media (max-width: 960px) {
@@ -572,6 +588,10 @@ textarea:focus {
   .pagination-wrap {
     justify-content: flex-start;
     flex-wrap: wrap;
+  }
+
+  .activity-filter {
+    grid-template-columns: 1fr;
   }
 
   .modal-grid.two-col {

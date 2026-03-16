@@ -57,18 +57,18 @@ export default function CourseTable({
             <th><input type="checkbox" checked={allSelected} onChange={(e) => onToggleAll(e.target.checked)} /></th>
             <th>
               <button className="th-sort" type="button" onClick={() => onSort('title')}>
-                Tên khóa học {sortBy === 'title' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                TÊN KHÓA HỌC {sortBy === 'title' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
               </button>
             </th>
-            <th>Điểm CME</th>
+            <th>ĐIỂM CME</th>
             <th>
               <button className="th-sort" type="button" onClick={() => onSort('startDate')}>
-                Thời gian {sortBy === 'startDate' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                THỜI GIAN {sortBy === 'startDate' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
               </button>
             </th>
-            <th>Khoa áp dụng</th>
-            <th>Trạng thái</th>
-            <th>Hành động</th>
+            <th>KHOA ÁP DỤNG</th>
+            <th>TRẠNG THÁI</th>
+            <th>HÀNH ĐỘNG</th>
           </tr>
         </thead>
         <tbody>
