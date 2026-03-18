@@ -131,6 +131,37 @@ a { color: var(--brand-2); }
   gap: 10px;
 }
 
+.password-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-field input {
+  padding-right: 52px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 1px solid #cfd7ea;
+  background: #f7f9ff;
+  color: #1f376f;
+  border-radius: 10px;
+  height: 30px;
+  min-width: 36px;
+  padding: 0 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.password-toggle:hover {
+  background: #eef4ff;
+}
+
 input, select, button { font: inherit; }
 
 input,
@@ -981,4 +1012,114 @@ textarea:focus {
 .course-suggest-item span { font-size: 12px; color: var(--muted); }
 
 .side-spacer { flex: 1; }
+
+.profile-page {
+  gap: 20px;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.profile-summary-card {
+  background:
+    radial-gradient(circle at top right, rgba(15, 98, 254, 0.12), transparent 36%),
+    linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.profile-summary-card h2 {
+  margin: 8px 0 4px;
+  font-size: 28px;
+}
+
+.profile-summary-role {
+  margin: 0 0 16px;
+  color: #4e5f86;
+}
+
+.profile-summary-list {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-summary-list div {
+  background: #fff;
+  border: 1px solid #e2e9fb;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.profile-summary-list span {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.profile-summary-list strong {
+  color: #1a2f65;
+}
+
+.profile-form-card {
+  gap: 16px;
+}
+
+.profile-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-field span {
+  font-size: 13px;
+  font-weight: 600;
+  color: #28407b;
+}
+
+.field-hint {
+  color: #6d7691;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.profile-span-2 {
+  grid-column: span 2;
+}
+
+.profile-field input:disabled {
+  background: #f3f6fd;
+  color: #617092;
+  cursor: not-allowed;
+}
+
+.profile-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+@media (max-width: 1200px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 960px) {
+  .profile-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-span-2 {
+    grid-column: span 1;
+  }
+}
 

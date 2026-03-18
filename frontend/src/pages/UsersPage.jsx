@@ -15,6 +15,7 @@ export default function UsersPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [editingId, setEditingId] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
     name: '',
     username: '',
@@ -36,10 +37,12 @@ export default function UsersPage() {
   const resetForm = () => {
     setForm({ name: '', username: '', password: '', role: 'DOCTOR', departmentId: '' });
     setEditingId('');
+    setShowPassword(false);
   };
 
   const onEdit = (user) => {
     setEditingId(user._id);
+    setShowPassword(false);
     setError('');
     setSuccess('Đang chỉnh sửa người dùng.');
     setForm({
@@ -71,7 +74,8 @@ export default function UsersPage() {
     e.preventDefault();
     setError('');
     setSuccess('');
-    if (!editingId && !strongPassword.test(form.password)) {
+    const passwordValue = form.password.trim();
+    if ((!editingId || passwordValue) && !strongPassword.test(passwordValue)) {
       setError('Mật khẩu cần ít nhất 6 ký tự, có 1 chữ in hoa và 1 ký tự đặc biệt.');
       return;
     }
@@ -84,6 +88,7 @@ export default function UsersPage() {
           role: form.role,
           departmentId: form.departmentId || null,
         };
+        if (passwordValue) payload.password = passwordValue;
         await api.patch(`/users/${editingId}`, payload);
         setSuccess('Cập nhật người dùng thành công');
       } else {
@@ -110,13 +115,23 @@ export default function UsersPage() {
         <div className="form-grid">
           <input placeholder="Họ và tên" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <input placeholder="Tên đăng nhập" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
-          <input
-            placeholder={editingId ? 'Đổi mật khẩu dùng chức năng reset' : 'Mật khẩu'}
-            type="password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            disabled={Boolean(editingId)}
-          />
+          <div className="password-field">
+            <input
+              placeholder={editingId ? 'Nhập mật khẩu mới nếu muốn đổi' : 'Mật khẩu'}
+              type={showPassword ? 'text' : 'password'}
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+            />
+            <button
+              type="button"
+              className="password-toggle"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+              title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+            >
+              {showPassword ? 'Ẩn' : '👁'}
+            </button>
+          </div>
           <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
             <option value="ADMIN">Quản trị hệ thống</option>
             <option value="MANAGER">Quản lý khoa/phòng</option>
@@ -129,7 +144,7 @@ export default function UsersPage() {
             ))}
           </select>
         </div>
-        <p className="muted">Quy tắc mật khẩu: tối thiểu 6 ký tự, có 1 chữ in hoa, có 1 ký tự đặc biệt.</p>
+        <p className="muted">Quy tắc mật khẩu: tối thiểu 6 ký tự, có 1 chữ in hoa, có 1 ký tự đặc biệt. Khi sửa user, để trống nếu không đổi mật khẩu.</p>
         {error && <p className="error">{error}</p>}
         {success && <p className="success">{success}</p>}
         <div className="row-actions">

@@ -24,7 +24,22 @@ router.post(
   ],
   createUser
 );
-router.patch('/:id', updateUser);
+router.patch(
+  '/:id',
+  [
+    body('name').optional().isLength({ min: 2 }).withMessage('Họ tên phải có ít nhất 2 ký tự'),
+    body('username')
+      .optional()
+      .matches(/^[a-zA-Z0-9._-]{3,30}$/)
+      .withMessage('Tên đăng nhập chỉ gồm chữ, số, . _ - và dài 3-30 ký tự'),
+    body('password')
+      .optional({ nullable: true, checkFalsy: true })
+      .custom((value) => isStrongPassword(value))
+      .withMessage('Mật khẩu phải từ 6 ký tự, có ít nhất 1 chữ in hoa và 1 ký tự đặc biệt'),
+    body('role').optional().isIn(['ADMIN', 'MANAGER', 'DOCTOR']).withMessage('Vai trò không hợp lệ'),
+  ],
+  updateUser
+);
 router.patch(
   '/:id/reset-password',
   [

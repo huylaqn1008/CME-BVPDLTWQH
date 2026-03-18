@@ -35,9 +35,17 @@ const createUser = async (req, res) => {
 };
 
 const updateUser = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
   const { id } = req.params;
   const patch = { ...req.body };
   if (patch.username) patch.username = String(patch.username).toLowerCase();
+  if (patch.password) {
+    patch.password = await bcrypt.hash(patch.password, 10);
+  } else {
+    delete patch.password;
+  }
   const user = await User.findByIdAndUpdate(id, patch, { new: true });
   if (!user) return res.status(404).json({ message: 'User not found' });
 

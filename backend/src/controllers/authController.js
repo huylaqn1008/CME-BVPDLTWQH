@@ -27,9 +27,37 @@ const login = async (req, res) => {
 };
 
 const me = async (req, res) => {
-  const safeUser = req.user.toObject();
+  const currentUser = await User.findById(req.user._id).populate('departmentId', 'name');
+  if (!currentUser || currentUser.deletedAt) return res.status(404).json({ message: 'User not found' });
+
+  const safeUser = currentUser.toObject();
   delete safeUser.password;
   return res.json(safeUser);
 };
 
-module.exports = { login, me };
+const updateMe = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+  const patch = {};
+  ['name', 'birthDate', 'cccd', 'phone', 'email'].forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(req.body, field)) {
+      patch[field] = req.body[field];
+    }
+  });
+
+  if (typeof patch.name === 'string') patch.name = patch.name.trim();
+  if (typeof patch.cccd === 'string') patch.cccd = patch.cccd.trim();
+  if (typeof patch.phone === 'string') patch.phone = patch.phone.trim();
+  if (typeof patch.email === 'string') patch.email = patch.email.trim().toLowerCase();
+  if (patch.birthDate === '') patch.birthDate = null;
+
+  const user = await User.findByIdAndUpdate(req.user._id, patch, { new: true }).populate('departmentId', 'name');
+  if (!user || user.deletedAt) return res.status(404).json({ message: 'User not found' });
+
+  const safeUser = user.toObject();
+  delete safeUser.password;
+  return res.json(safeUser);
+};
+
+module.exports = { login, me, updateMe };

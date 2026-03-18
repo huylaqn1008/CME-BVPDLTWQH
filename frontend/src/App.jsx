@@ -10,6 +10,7 @@ import ApprovalsPage from './pages/ApprovalsPage';
 import RecordsPage from './pages/RecordsPage';
 import DepartmentsPage from './pages/DepartmentsPage';
 import ActivityPage from './pages/ActivityPage';
+import ProfilePage from './pages/ProfilePage';
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<MainLayout />}>
           <Route path="/" element={<DashboardPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/records" element={<RecordsPage />} />
 
           <Route element={<ProtectedRoute roles={['ADMIN']} />}>

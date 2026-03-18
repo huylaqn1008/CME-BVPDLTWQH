@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 const linksByRole = {
   ADMIN: [
     { to: '/', label: 'Bảng điều khiển' },
+    { to: '/profile', label: 'Thông tin cá nhân' },
     { to: '/users', label: 'Người dùng' },
     { to: '/departments', label: 'Khoa/Phòng' },
     { to: '/courses', label: 'Khóa học' },
@@ -12,11 +13,13 @@ const linksByRole = {
   ],
   MANAGER: [
     { to: '/', label: 'Bảng điều khiển' },
+    { to: '/profile', label: 'Thông tin cá nhân' },
     { to: '/approvals', label: 'Duyệt hồ sơ' },
     { to: '/records', label: 'Hồ sơ CME' },
   ],
   DOCTOR: [
     { to: '/', label: 'Bảng điều khiển' },
+    { to: '/profile', label: 'Thông tin cá nhân' },
     { to: '/upload', label: 'Nộp minh chứng' },
     { to: '/records', label: 'Hồ sơ của tôi' },
   ],
