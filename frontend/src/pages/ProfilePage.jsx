@@ -214,7 +214,6 @@ export default function ProfilePage() {
                 inputMode="numeric"
                 maxLength={10}
               />
-              <small className="field-hint">Định dạng Việt Nam: ngày/tháng/năm, ví dụ 08/10/2001.</small>
             </label>
             <label className="profile-field">
               <span>Vai trò</span>
@@ -233,7 +232,6 @@ export default function ProfilePage() {
                 inputMode="numeric"
                 maxLength={12}
               />
-              <small className="field-hint">12 số, 3 số đầu là mã tỉnh như 001, 052, 079... và số thứ 4 là mã giới tính/năm sinh.</small>
             </label>
             <label className="profile-field">
               <span>Số điện thoại</span>
@@ -244,7 +242,6 @@ export default function ProfilePage() {
                 inputMode="numeric"
                 maxLength={10}
               />
-              <small className="field-hint">10 số, chỉ nhận đầu số di động hợp lệ ở Việt Nam.</small>
             </label>
             <label className="profile-field profile-span-2">
               <span>Email</span>

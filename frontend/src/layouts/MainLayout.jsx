@@ -14,6 +14,7 @@ const linksByRole = {
   MANAGER: [
     { to: '/', label: 'Bảng điều khiển' },
     { to: '/profile', label: 'Thông tin cá nhân' },
+    { to: '/department-doctors', label: 'Bác sĩ trong khoa' },
     { to: '/approvals', label: 'Duyệt hồ sơ' },
     { to: '/records', label: 'Hồ sơ CME' },
   ],
