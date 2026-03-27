@@ -1,15 +1,38 @@
-﻿const { Router } = require('express');
+const { Router } = require('express');
+const multer = require('multer');
 const { body } = require('express-validator');
-const { listUsers, createUser, updateUser, resetPassword, deleteUser } = require('../controllers/userController');
+const { listUsers, importUsers, createUser, updateUser, resetPassword, deleteUser } = require('../controllers/userController');
 const auth = require('../middlewares/auth');
 const roleGuard = require('../middlewares/role');
 const { isStrongPassword } = require('../utils/password');
 
 const router = Router();
+const excelUpload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (_req, file, cb) => {
+    const allowedExt = ['.xlsx', '.xls'];
+    const allowedMime = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+    ];
+    const fileName = String(file.originalname || '').toLowerCase();
+    if (allowedMime.includes(file.mimetype) || allowedExt.some((ext) => fileName.endsWith(ext))) {
+      return cb(null, true);
+    }
+    return cb(new Error('Chỉ chấp nhận file Excel .xlsx hoặc .xls'));
+  },
+});
+const handleExcelUpload = (req, res, next) => {
+  excelUpload.single('file')(req, res, (err) => {
+    if (err) return res.status(400).json({ message: err.message });
+    return next();
+  });
+};
 
 router.use(auth, roleGuard('ADMIN'));
 
 router.get('/', listUsers);
+router.post('/import', handleExcelUpload, importUsers);
 router.post(
   '/',
   [

@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "cme-manager-backend",
   "version": "1.0.0",
   "description": "CME Manager Backend",
@@ -19,7 +19,8 @@
     "mongoose": "^8.6.2",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
-    "pdfkit": "^0.15.0"
+    "pdfkit": "^0.15.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"
