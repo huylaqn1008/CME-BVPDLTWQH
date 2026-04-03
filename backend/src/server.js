@@ -11,6 +11,7 @@ const courseRoutes = require('./routes/courseRoutes');
 const recordRoutes = require('./routes/recordRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const activityRoutes = require('./routes/activityRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 const departmentDoctorsRoutes = require('./routes/departmentDoctorsRoutes');
 const errorHandler = require('./middlewares/errorHandler');
 const { ensureAdminAccount } = require('./services/bootstrapService');
@@ -46,6 +47,7 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/records', recordRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/activities', activityRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/department-doctors', departmentDoctorsRoutes);
 app.use('/files/certificates', express.static(path.join(__dirname, '../uploads/certificates')));
 

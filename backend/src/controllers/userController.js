@@ -5,6 +5,8 @@ const User = require('../models/User');
 const Department = require('../models/Department');
 const CMERecord = require('../models/CMERecord');
 const { writeAudit } = require('../services/auditService');
+const { NOTIFICATION_PRIORITIES, NOTIFICATION_TYPES } = require('../constants/notifications');
+const { notifyUsersByIds } = require('../services/notificationService');
 
 const DEFAULT_IMPORT_PASSWORD = 'Meoken1@2@3';
 
@@ -182,11 +184,63 @@ const importUsers = async (req, res) => {
     createdUsers.push(user);
   }
 
+  await notifyUsersByIds(
+    createdUsers.map((user) => user._id),
+    {
+      title: 'Tài khoản đã được tạo',
+      message: `Tài khoản CME của bạn đã được khởi tạo. Mật khẩu mặc định là ${DEFAULT_IMPORT_PASSWORD}.`,
+      type: NOTIFICATION_TYPES.ACCOUNT_CREATED,
+      priority: NOTIFICATION_PRIORITIES.MEDIUM,
+      link: '/profile',
+      createdBy: req.user._id,
+      audienceType: 'USER',
+      targetUsers: createdUsers.map((user) => user._id),
+      category: 'system',
+      groupKey: `import-account-user-${createdUsers.length}`,
+    }
+  );
+
+  const managerRecipients = await User.find({
+    deletedAt: null,
+    role: 'MANAGER',
+    departmentId: { $in: createdUsers.map((user) => user.departmentId).filter(Boolean) },
+  }).select('_id departmentId');
+
+  if (managerRecipients.length > 0) {
+      await notifyUsersByIds(managerRecipients.map((manager) => manager._id), {
+        title: 'Bác sĩ mới được thêm vào khoa',
+        message: `Hệ thống vừa tạo ${createdUsers.length} tài khoản bác sĩ mới trong khoa của bạn.`,
+        type: NOTIFICATION_TYPES.DOCTOR_ADDED,
+        priority: NOTIFICATION_PRIORITIES.LOW,
+        link: '/department-doctors',
+        createdBy: req.user._id,
+        audienceType: 'ROLE',
+        targetRoles: ['MANAGER'],
+        targetDepartments: [...new Set(createdUsers.map((user) => user.departmentId?.toString()).filter(Boolean))],
+        category: 'admin',
+        groupKey: `doctor-added-${createdUsers.length}`,
+      });
+  }
+
   await writeAudit({
     actorId: req.user._id,
     action: 'IMPORT_USERS',
     entityType: 'User',
     entityId: createdUsers.map((user) => user._id.toString()).join(','),
+  });
+
+  await notifyUsersByIds([req.user._id], {
+    title: 'Bulk import tài khoản hoàn thành',
+    message: `Đã tạo ${createdUsers.length} tài khoản từ file Excel.`,
+    type: NOTIFICATION_TYPES.BULK_IMPORT_COMPLETED,
+    priority: NOTIFICATION_PRIORITIES.MEDIUM,
+    link: '/users',
+    createdBy: req.user._id,
+    meta: { createdCount: createdUsers.length },
+    audienceType: 'USER',
+    targetUsers: [req.user._id],
+    category: 'admin',
+    groupKey: `bulk-import-${req.user._id.toString()}`,
   });
 
   return res.status(201).json({
@@ -286,6 +340,42 @@ const createUser = async (req, res) => {
     role,
     departmentId: departmentId || null,
   });
+
+  await notifyUsersByIds([user._id], {
+    title: 'Tài khoản mới đã được tạo',
+    message: 'Tài khoản của bạn đã được khởi tạo trên hệ thống CME. Vui lòng đổi mật khẩu nếu cần.',
+    type: NOTIFICATION_TYPES.ACCOUNT_CREATED,
+    priority: NOTIFICATION_PRIORITIES.MEDIUM,
+    link: '/profile',
+    createdBy: req.user._id,
+    audienceType: 'USER',
+    targetUsers: [user._id],
+    category: 'system',
+    groupKey: `account-created-${user._id.toString()}`,
+  });
+
+  if (user.role === 'DOCTOR' && user.departmentId) {
+    const managers = await User.find({
+      deletedAt: null,
+      role: 'MANAGER',
+      departmentId: user.departmentId,
+    }).select('_id');
+    if (managers.length > 0) {
+      await notifyUsersByIds(managers.map((manager) => manager._id), {
+        title: 'Bác sĩ mới được thêm vào khoa',
+        message: `${user.name} vừa được tạo trong hệ thống.`,
+        type: NOTIFICATION_TYPES.DOCTOR_ADDED,
+        priority: NOTIFICATION_PRIORITIES.LOW,
+        link: '/department-doctors',
+        createdBy: req.user._id,
+        audienceType: 'ROLE',
+        targetRoles: ['MANAGER'],
+        targetDepartments: [user.departmentId],
+        category: 'admin',
+        groupKey: `doctor-added-user-${user._id.toString()}`,
+      });
+    }
+  }
 
   await writeAudit({ actorId: req.user._id, action: 'CREATE_USER', entityType: 'User', entityId: user._id.toString() });
   const safeUser = user.toObject();

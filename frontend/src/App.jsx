@@ -11,8 +11,10 @@ import RecordsPage from './pages/RecordsPage';
 import DepartmentsPage from './pages/DepartmentsPage';
 import ActivityPage from './pages/ActivityPage';
 import ProfilePage from './pages/ProfilePage';
+import NotificationsPage from './pages/NotificationsPage';
 import DepartmentDoctorsPage from './pages/DepartmentDoctorsPage';
 import DepartmentDoctorDetailPage from './pages/DepartmentDoctorDetailPage';
+import MyCoursesPage from './pages/MyCoursesPage';
 
 export default function App() {
   return (
@@ -23,6 +25,7 @@ export default function App() {
         <Route element={<MainLayout />}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/records" element={<RecordsPage />} />
 
           <Route element={<ProtectedRoute roles={['ADMIN']} />}>
@@ -35,6 +38,10 @@ export default function App() {
           <Route element={<ProtectedRoute roles={['MANAGER']} />}>
             <Route path="/department-doctors" element={<DepartmentDoctorsPage />} />
             <Route path="/department-doctors/:id" element={<DepartmentDoctorDetailPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute roles={['MANAGER', 'DOCTOR']} />}>
+            <Route path="/my-courses" element={<MyCoursesPage />} />
           </Route>
 
           <Route element={<ProtectedRoute roles={['DOCTOR']} />}>

@@ -6,6 +6,7 @@ const {
   updateCourse,
   deleteCourse,
   listEligibleCoursesForDoctor,
+  listMyCourses,
 } = require('../controllers/courseController');
 const auth = require('../middlewares/auth');
 const roleGuard = require('../middlewares/role');
@@ -13,6 +14,7 @@ const roleGuard = require('../middlewares/role');
 const router = Router();
 
 router.get('/', auth, listCourses);
+router.get('/my', auth, roleGuard('MANAGER', 'DOCTOR'), listMyCourses);
 router.get('/eligible/me', auth, roleGuard('DOCTOR'), listEligibleCoursesForDoctor);
 router.post(
   '/',

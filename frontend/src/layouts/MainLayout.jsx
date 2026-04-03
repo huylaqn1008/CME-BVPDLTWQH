@@ -1,10 +1,13 @@
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
 const linksByRole = {
   ADMIN: [
     { to: '/', label: 'Bảng điều khiển' },
     { to: '/profile', label: 'Thông tin cá nhân' },
+    { to: '/notifications', label: 'Thông báo' },
     { to: '/users', label: 'Người dùng' },
     { to: '/departments', label: 'Khoa/Phòng' },
     { to: '/courses', label: 'Khóa học' },
@@ -14,6 +17,8 @@ const linksByRole = {
   MANAGER: [
     { to: '/', label: 'Bảng điều khiển' },
     { to: '/profile', label: 'Thông tin cá nhân' },
+    { to: '/notifications', label: 'Thông báo' },
+    { to: '/my-courses', label: 'Khóa học của tôi' },
     { to: '/department-doctors', label: 'Bác sĩ trong khoa' },
     { to: '/approvals', label: 'Duyệt hồ sơ' },
     { to: '/records', label: 'Hồ sơ CME' },
@@ -21,6 +26,8 @@ const linksByRole = {
   DOCTOR: [
     { to: '/', label: 'Bảng điều khiển' },
     { to: '/profile', label: 'Thông tin cá nhân' },
+    { to: '/notifications', label: 'Thông báo' },
+    { to: '/my-courses', label: 'Khóa học của tôi' },
     { to: '/upload', label: 'Nộp minh chứng' },
     { to: '/records', label: 'Hồ sơ của tôi' },
   ],
@@ -34,7 +41,30 @@ const roleLabel = {
 
 export default function MainLayout() {
   const { user, logout } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
   const links = linksByRole[user?.role] || [];
+
+  useEffect(() => {
+    if (!user) return undefined;
+
+    let mounted = true;
+    const loadUnread = async () => {
+      try {
+        const res = await api.get('/notifications/unread-count');
+        if (mounted) setUnreadCount(res.data?.unreadCount || 0);
+      } catch (_err) {
+        if (mounted) setUnreadCount(0);
+      }
+    };
+
+    loadUnread();
+    const timer = setInterval(loadUnread, 60000);
+
+    return () => {
+      mounted = false;
+      clearInterval(timer);
+    };
+  }, [user]);
 
   return (
     <div className="shell">
@@ -47,7 +77,10 @@ export default function MainLayout() {
         <nav className="menu-list">
           {links.map((item) => (
             <NavLink key={item.to} to={item.to} className="menu-item">
-              {item.label}
+              <span>{item.label}</span>
+              {item.to === '/notifications' && unreadCount > 0 && (
+                <span className="menu-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+              )}
             </NavLink>
           ))}
         </nav>

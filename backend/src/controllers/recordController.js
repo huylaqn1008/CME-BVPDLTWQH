@@ -8,6 +8,8 @@ const Certificate = require('../models/Certificate');
 const { generateCertificate } = require('../utils/certificate');
 const { writeAudit } = require('../services/auditService');
 const { deriveTimelineStatus } = require('../utils/courseStatus');
+const { NOTIFICATION_PRIORITIES, NOTIFICATION_TYPES } = require('../constants/notifications');
+const { notifyUsersByIds, notifyUsersByQuery } = require('../services/notificationService');
 
 const courseVisibleForDoctor = (course, doctor) => {
   const departments = Array.isArray(course.applicableDepartments) ? course.applicableDepartments : [];
@@ -89,6 +91,23 @@ const createExternalRecord = async (req, res) => {
   });
 
   await writeAudit({ actorId: req.user._id, action: 'UPLOAD_EXTERNAL_RECORD', entityType: 'CMERecord', entityId: record._id.toString() });
+  await notifyUsersByQuery(
+    { role: 'MANAGER', departmentId: req.user.departmentId, deletedAt: null },
+    {
+      title: 'Có hồ sơ CME mới chờ duyệt',
+      message: `${req.user.name} vừa nộp hồ sơ "${course.title}".`,
+      type: NOTIFICATION_TYPES.RECORD_SUBMITTED,
+      priority: NOTIFICATION_PRIORITIES.HIGH,
+      link: '/approvals',
+      createdBy: req.user._id,
+      meta: { recordId: record._id.toString(), courseId: course._id.toString() },
+      audienceType: 'ROLE',
+      targetRoles: ['MANAGER'],
+      targetDepartments: [req.user.departmentId],
+      category: 'approval',
+      groupKey: `record-submitted-${record._id.toString()}`,
+    }
+  );
   return res.status(201).json(record);
 };
 
@@ -202,7 +221,7 @@ const createInternalCompletion = async (req, res) => {
 
 const managerReview = async (req, res) => {
   const { status, note } = req.body;
-  const record = await CMERecord.findById(req.params.id).populate('userId', 'departmentId');
+  const record = await CMERecord.findById(req.params.id).populate('userId', 'departmentId name');
   if (!record || record.deletedAt) return res.status(404).json({ message: 'Record not found' });
   if (record.userId.departmentId?.toString() !== req.user.departmentId?.toString()) return res.status(403).json({ message: 'Not in your department' });
   if (record.status !== 'pending') return res.status(400).json({ message: 'Only pending records can be reviewed by manager' });
@@ -212,12 +231,25 @@ const managerReview = async (req, res) => {
   await record.save();
 
   await ApprovalHistory.create({ cmeRecordId: record._id, approvedBy: req.user._id, role: 'MANAGER', status: record.status, note });
+  await notifyUsersByIds([record.userId._id], {
+    title: 'Hồ sơ CME đã được quản lý khoa xử lý',
+    message: `Hồ sơ "${record.title}" đã được ${record.status === 'manager_approved' ? 'duyệt' : 'từ chối'} bởi quản lý khoa.`,
+    type: record.status === 'manager_approved' ? NOTIFICATION_TYPES.RECORD_REVIEWED : NOTIFICATION_TYPES.RECORD_REJECTED,
+    priority: record.status === 'manager_approved' ? NOTIFICATION_PRIORITIES.MEDIUM : NOTIFICATION_PRIORITIES.HIGH,
+    link: '/records',
+    createdBy: req.user._id,
+    meta: { recordId: record._id.toString(), status: record.status },
+    audienceType: 'USER',
+    targetUsers: [record.userId._id],
+    category: 'approval',
+    groupKey: `record-manager-${record._id.toString()}`,
+  });
   return res.json(record);
 };
 
 const adminReview = async (req, res) => {
   const { status, note, approvedPoints } = req.body;
-  const record = await CMERecord.findById(req.params.id).populate('userId', 'name');
+  const record = await CMERecord.findById(req.params.id).populate('userId', 'name departmentId');
   if (!record || record.deletedAt) return res.status(404).json({ message: 'Record not found' });
   if (record.status !== 'manager_approved') return res.status(400).json({ message: 'Record must be manager approved first' });
 
@@ -251,6 +283,49 @@ const adminReview = async (req, res) => {
 
   await ApprovalHistory.create({ cmeRecordId: record._id, approvedBy: req.user._id, role: 'ADMIN', status: record.status, note });
   await writeAudit({ actorId: req.user._id, action: 'ADMIN_REVIEW_RECORD', entityType: 'CMERecord', entityId: record._id.toString(), meta: { status: record.status } });
+
+  await notifyUsersByIds([record.userId._id], {
+    title: 'Hồ sơ CME đã được duyệt cuối cùng',
+    message:
+      record.status === 'admin_approved'
+        ? `Hồ sơ "${record.title}" đã được duyệt cuối cùng và cộng điểm vào tài khoản của bạn.`
+        : `Hồ sơ "${record.title}" đã bị từ chối ở bước duyệt cuối.`,
+    type: record.status === 'admin_approved' ? NOTIFICATION_TYPES.RECORD_APPROVED : NOTIFICATION_TYPES.RECORD_REJECTED,
+    priority: record.status === 'admin_approved' ? NOTIFICATION_PRIORITIES.HIGH : NOTIFICATION_PRIORITIES.CRITICAL,
+    link: '/records',
+    createdBy: req.user._id,
+    meta: { recordId: record._id.toString(), status: record.status },
+    audienceType: 'USER',
+    targetUsers: [record.userId._id],
+    category: 'approval',
+    groupKey: `record-final-user-${record._id.toString()}`,
+  });
+
+  if (record.userId.departmentId) {
+    const managers = await User.find({
+      deletedAt: null,
+      role: 'MANAGER',
+      departmentId: record.userId.departmentId,
+    }).select('_id');
+
+    await notifyUsersByIds(managers.map((manager) => manager._id), {
+      title: 'Một hồ sơ CME đã được xử lý ở bước cuối',
+      message:
+        record.status === 'admin_approved'
+          ? `Hồ sơ "${record.title}" của ${record.userId.name} đã được phê duyệt cuối cùng.`
+          : `Hồ sơ "${record.title}" của ${record.userId.name} đã bị từ chối ở bước cuối.`,
+      type: record.status === 'admin_approved' ? NOTIFICATION_TYPES.RECORD_APPROVED : NOTIFICATION_TYPES.RECORD_REJECTED,
+      priority: record.status === 'admin_approved' ? NOTIFICATION_PRIORITIES.MEDIUM : NOTIFICATION_PRIORITIES.HIGH,
+      link: '/approvals',
+      createdBy: req.user._id,
+      meta: { recordId: record._id.toString(), status: record.status, doctorId: record.userId._id.toString() },
+      audienceType: 'ROLE',
+      targetRoles: ['MANAGER'],
+      targetDepartments: [record.userId.departmentId],
+      category: 'approval',
+      groupKey: `record-final-manager-${record._id.toString()}`,
+    });
+  }
 
   return res.json(record);
 };
